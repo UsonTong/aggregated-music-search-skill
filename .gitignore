@@ -1,0 +1,15 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Local temp files
+.tmp/
+*.tmp
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+
+# Skill runtime artifacts
+skills/**/outputs/*.json
