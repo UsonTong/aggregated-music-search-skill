@@ -13,3 +13,4 @@ Thumbs.db
 
 # Skill runtime artifacts
 skills/**/outputs/*.json
+outputs/*.json
