@@ -1,6 +1,6 @@
 ---
 name: aggregated-music-search
-description: Search across multiple music providers, merge candidate songs into one result list, allow index-based selection, and persist search state for handoff to the download skill. Use when the user gives a song name and wants pure aggregated music search across platforms (no download/export/send).
+description: Search across multiple music providers, merge candidate songs into one result list, and allow index-based selection. Output includes a per-track source_url link for downstream download tools. Use when the user gives a song name and wants pure aggregated music search across platforms (no download/export/send).
 ---
 
 # Aggregated Music Search
@@ -39,14 +39,53 @@ Optional args:
 
 - Treat this skill as a pure multi-platform search + selection workflow.
 - Default provider is `all`, which searches across multiple providers first.
-- Search by song name first, merge results, and save state for later reuse by `music-download`.
+- Search by song name first, merge results, and return/save results.
+- Selected result output includes `source_url`, so downstream download can use link input directly.
 - Let the user choose the intended result by index when needed.
 - This skill does **not** download, export, or send media.
+
+## Output Contract (must follow exactly)
+
+When returning candidate list, always use:
+
+```text
+找到这些候选：
+1. 歌名 - 艺人 | 平台
+2. 歌名 - 艺人 | 平台
+...
+回复序号即可选择。
+```
+
+Rules:
+
+- Keep one candidate per line.
+- Candidate line format must be exactly: `序号. 歌名 - 艺人 | 平台`.
+- Do not add extra commentary before/after this block.
+- Do not append debug notes/warnings unless the user explicitly asks.
+
+When returning a selected track, always use this fixed card format:
+
+```text
+歌名
+• 艺人：<值或未知>
+• 专辑：<值或未知>
+• 时长：<值或未知>
+• 链接：<source_url>
+
+搜索结果来自：<平台中文名>（aggregated-music-search）
+```
+
+Additional constraints:
+
+- Missing fields must be written as `未知` only.
+- Do not write phrases like `（聚合结果未提供）`.
+- Keep `搜索结果来自` line exactly as shown, only replacing platform name.
 
 ## State File Contract
 
 - Default state file: `skills/aggregated-music-search/outputs/last_search.json`
-- Purpose: carry search candidates and selected index metadata into the download step.
+- Purpose: carry search candidates and selected index metadata.
+- Each track stores `source_url`; selected-result JSON also prints `source_url` for URL-based downstream download.
 - `--pick-index N`: run a fresh search, then select index `N` from that fresh result set.
 - `--select-index N`: skip fresh search and select index `N` from the previously saved result set.
 

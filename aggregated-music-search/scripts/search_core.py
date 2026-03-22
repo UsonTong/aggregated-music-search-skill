@@ -21,7 +21,7 @@ from common import (
     provider_label,
     strip_trailing_slash,
 )
-from providers import SEARCH_HANDLERS, search_all_providers, search_provider
+from providers import SEARCH_HANDLERS, enrich_track_metadata, search_all_providers, search_provider
 from state import load_search_state, save_search_state
 
 
@@ -104,8 +104,10 @@ def run_search_workflow(args: argparse.Namespace) -> int:
     if reused_song:
         print(f"使用上一次搜索结果：{reused_song}")
     track = select_track(tracks, effective_pick)
+    track = enrich_track_metadata(context, track)
     print(f"已选择：{track.title} - {track.artist} | {provider_label(track.provider)}")
     print("已保存所选曲目信息。")
+    duration_seconds = int(track.duration_ms / 1000) if isinstance(track.duration_ms, int) and track.duration_ms > 0 else None
     print(json.dumps({
         "song": reused_song or args.song,
         "selected_index": effective_pick,
@@ -114,6 +116,8 @@ def run_search_workflow(args: argparse.Namespace) -> int:
         "album": track.album,
         "provider": track.provider,
         "track_id": track.track_id,
+        "duration_seconds": duration_seconds,
+        "source_url": track.source_url,
         "state_file": str(state_file),
     }, ensure_ascii=False, indent=2))
     return 0

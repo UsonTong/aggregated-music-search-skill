@@ -121,6 +121,7 @@ def parse_qqmusic_track(item: dict[str, Any]) -> Track | None:
         title=title or str(mid),
         artist=" / ".join(singer_names) or "Unknown Artist",
         album=album_name,
+        source_url=f"https://y.qq.com/n/ryqq/songDetail/{mid}",
     )
 
 
@@ -145,6 +146,7 @@ def parse_kugou_track(item: dict[str, Any]) -> Track | None:
         artist=artist or "Unknown Artist",
         album=album,
         duration_ms=duration_ms,
+        source_url=f"https://www.kugou.com/song/#hash={file_hash}",
     )
 
 
@@ -171,6 +173,7 @@ def parse_migu_track(item: dict[str, Any]) -> Track | None:
         title=normalize_space(str(item.get("songName") or item.get("name") or "")) or str(song_id),
         artist=" / ".join(singer_names) or "Unknown Artist",
         album=normalize_space(str(item.get("album") or item.get("albumName") or "")),
+        source_url=f"https://music.migu.cn/v3/music/song/{song_id}",
     )
 
 
@@ -341,6 +344,33 @@ def search_provider(provider: str, context: ProviderContext, query: str) -> list
     return handler(context, query)
 
 
+def enrich_track_metadata(context: ProviderContext, track: Track) -> Track:
+    """Best-effort metadata enrichment after selection (duration)."""
+    try:
+        if track.provider == "netease":
+            headers = {
+                **shared_headers(context.netease_base),
+                "Accept": "application/json, text/plain, */*",
+                "Origin": context.netease_base,
+                "Referer": join_url(context.netease_base, "/"),
+                "User-Agent": USER_AGENT,
+            }
+            query_string = urllib.parse.urlencode({"ids": f"[{track.track_id}]"})
+            api_url = join_url(context.netease_base, f"/api/song/detail/?{query_string}")
+            payload = context.client.get_json(api_url, headers=headers)
+            songs = payload.get("songs") if isinstance(payload, dict) else None
+            if isinstance(songs, list) and songs and isinstance(songs[0], dict):
+                detail = songs[0]
+                duration_ms = detail.get("dt") or detail.get("duration")
+                if isinstance(duration_ms, int) and duration_ms > 0 and not track.duration_ms:
+                    track.duration_ms = duration_ms
+    except SkillError:
+        return track
+    except Exception:
+        return track
+    return track
+
+
 def dedupe_tracks(query: str, tracks: list[Track], artist_hint: str | None) -> list[Track]:
     best_by_key: dict[str, Track] = {}
     best_score: dict[str, float] = {}
@@ -369,3 +399,4 @@ def search_all_providers(context: ProviderContext, query: str) -> tuple[list[Tra
         detail = "; ".join(f"{provider}: {msg}" for provider, msg in errors.items()) or "no providers returned results"
         raise SkillError(f"No search results from any provider for {query!r}. Details: {detail}")
     return dedupe_tracks(query, combined, context.artist_hint), errors
+
