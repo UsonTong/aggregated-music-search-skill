@@ -10,16 +10,43 @@ description: Search across multiple music providers, merge candidate songs into 
 Use this search step first:
 
 ```bash
-python3 skills/aggregated-music-search/scripts/aggregated_music_search.py \
+python3 scripts/aggregated_music_search.py \
   --song "稻香" \
   --list-only
 ```
 
-The default saved state file is:
+## Installation / Integration Guidance
 
-```text
-skills/aggregated-music-search/outputs/last_search.json
+For any agent integrating this skill, use the minimal flow below and avoid exploring the repository first unless needed:
+
+1. Use the primary entrypoint `scripts/aggregated_music_search.py`.
+2. Verify the command surface with:
+
+```bash
+python3 scripts/aggregated_music_search.py --help
 ```
+
+3. Verify the basic behavior with:
+
+```bash
+python3 scripts/aggregated_music_search.py --song "稻香" --list-only
+```
+
+4. Run the repository smoke test only when a broader self-check is needed:
+
+```bash
+bash scripts/smoke_test.sh
+```
+
+Integration notes:
+
+- Primary entrypoint: `scripts/aggregated_music_search.py`
+- Compatibility entrypoint: `scripts/aggregated_music_search_compat.py`
+- Default state file: `outputs/last_search.json`
+- Recommended flow: search candidates first, then select by index
+- Output contract: see `SKILL.md`
+
+Use repo-local paths directly. The primary entrypoint is `scripts/aggregated_music_search.py`.
 
 Optional args:
 
@@ -83,7 +110,7 @@ Additional constraints:
 
 ## State File Contract
 
-- Default state file: `skills/aggregated-music-search/outputs/last_search.json`
+- Default state file: `outputs/last_search.json`
 - Purpose: carry search candidates and selected index metadata.
 - Each track stores `source_url`; selected-result JSON also prints `source_url` for URL-based downstream download.
 - `--pick-index N`: run a fresh search, then select index `N` from that fresh result set.
